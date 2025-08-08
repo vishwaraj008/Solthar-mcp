@@ -1,0 +1,41 @@
+{
+  "name": "solthar-mcp",
+  "version": "1.0.0",
+  "description": "Solthar MCP Server - Model Context Protocol router with Athena integration",
+  "main": "src/app.js",
+  "scripts": {
+    "dev": "nodemon src/app.js",
+    "start": "node src/app.js"
+  },
+  "keywords": [
+    "mcp",
+    "solthar",
+    "express",
+    "redis",
+    "mysql",
+    "athena",
+    "jwt",
+    "rate-limiting"
+  ],
+  "author": "Vishwa Raj Singh Chundawat",
+  "license": "MIT",
+  "dependencies": {
+    "@upstash/redis": "^1.30.0",
+    "axios": "^1.7.3",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.3.1",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.7.0",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.14.3",
+    "pino": "^9.4.0",
+    "pino-pretty": "^11.2.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
