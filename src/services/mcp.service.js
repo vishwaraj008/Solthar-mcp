@@ -1,6 +1,6 @@
 const { AppError } = require('../utils/error');
 const contextService = require('./context.service');
-const athenaService = require('./athena.service');
+const toolService = require('./toolService');
 
 const apiKeyModel = require('../models/api_keys');
 const requestLogModel = require('../models/request_logs');
@@ -57,15 +57,16 @@ async function incrementUsageCount(apiKey) {
   }
 }
 
-async function logRequest({ userId, apiKey, prompt, response }) {
+async function logRequest({ userId, apiKey, prompt, response, processingTimeMs, tool }) {
   await requestLogModel.createRequestLog({
     user_id: userId,
-    api_key: apiKey,
-    prompt,
-    response,
-    created_at: new Date(),
+    request_payload: { api_key: apiKey, prompt },  // stored as JSON
+    response_payload: { response },               // stored as JSON
+    processing_time_ms: processingTimeMs ?? null,
+    tool_used: tool || null
   });
 }
+
 
 async function getContext(userId) {
   return await contextLogModel.getContextLog(userId);
@@ -77,25 +78,39 @@ async function saveContext(userId, context) {
 
 async function execute(command, params, apiKey, userId) {
   try {
-    // Validate API key first
+    // 1. Validate API key
     await validateApiKey(apiKey);
 
     let result;
 
     switch (command) {
       case 'generateDocs':
-        if (!params.projectPath || !params.outputDir) {
-          throw new AppError(
-            'Missing required params for generateDocs: projectPath, outputDir',
-            400
-          );
+        if (!params.projectPath || !params.outputPath) {
+          throw new AppError('Missing required params for generateDocs', 400);
         }
-        result = {
-          message: 'Documentation generation started',
-          projectPath: params.projectPath,
-          outputDir: params.outputDir,
-          includeIndirectLogic: !!params.includeIndirectLogic,
-        };
+
+        const startTimeMoad = Date.now();
+
+        // 2. Call Moad tool
+        const moadResponse = await toolService.moad(
+          params.projectPath,
+          params.outputPath,
+          params.includeIndirectLogic || false
+        );
+
+      const elapsedTime = Date.now() - startTimeMoad;
+
+          await logRequest({
+            userId,
+            apiKey,
+            prompt: `Generate docs for ${params.projectPath} -> ${params.outputPath}`,
+            response: moadResponse.response,
+            processingTimeMs: elapsedTime,
+            tool: 'Moad'
+          });
+       
+
+        result = moadResponse;
         break;
 
       case 'askAthena':
@@ -103,30 +118,27 @@ async function execute(command, params, apiKey, userId) {
           throw new AppError('Missing prompt for Athena', 400);
         }
 
-        // Get previous context if any
         const existingContext = await getContext(userId);
         const fullPrompt = existingContext
           ? existingContext + '\n' + params.prompt
           : params.prompt;
 
-        // Call Athena service
-        const athenaResponse = await athenaService.ask(fullPrompt, params.options || {});
+        const athenaResponse = await toolService.athena(fullPrompt, params.options || {});
 
-        // Save updated context
         const updatedContext =
           (existingContext || '') +
           '\nUser: ' +
           params.prompt +
           '\nAthena: ' +
           athenaResponse.response;
-        await saveContext(userId, updatedContext);
 
-        // Log request
+        await saveContext(userId, updatedContext);
         await logRequest({
           userId,
           apiKey,
           prompt: params.prompt,
           response: athenaResponse.response,
+          tool: 'Athena',
         });
 
         result = athenaResponse;
@@ -136,18 +148,19 @@ async function execute(command, params, apiKey, userId) {
         throw new AppError(`Unknown MCP command: ${command}`, 400);
     }
 
-    // Increment usage count only after successful execution
+    // 5. Increment usage count after success
     await incrementUsageCount(apiKey);
 
     return result;
   } catch (err) {
-    console.log(err);
+    console.log(err)
     if (!(err instanceof AppError)) {
       throw new AppError('MCP command execution error', 500);
     }
     throw err;
   }
 }
+
 
 async function getStatus() {
   try {
