@@ -19,7 +19,6 @@ async function initialize() {
     }
 
     // Optional: remove or reduce this log for production
-    console.log('Connecting to Redis...');
 
     redisClient = new Redis(redisUrl);
 

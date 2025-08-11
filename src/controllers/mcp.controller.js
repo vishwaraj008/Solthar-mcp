@@ -5,13 +5,7 @@ const mcpProcessor = require('../processors/mcp.processor');
 
 async function initializeMCP(req, res, next) {
     try {
-        const { config } = req.body;
-
-        if (!config || typeof config !== 'object') {
-            throw new ValidationError('Invalid MCP configuration provided.');
-        }
-
-        const result = await mcpService.initialize(config);
+        const result = await mcpService.initialize();
 
         res.status(200).json({
             success: true,
@@ -27,7 +21,7 @@ async function initializeMCP(req, res, next) {
         })
       );
     }
-
+    console.log(err)
     if (!(err instanceof AppError)) {
       return next(
         new AppError("Unexpected error while initialzing mcp", 500, true, {

@@ -6,16 +6,16 @@ const apiKeyModel = require('../models/api_keys');
 const requestLogModel = require('../models/request_logs');
 const contextLogModel = require('../models/context_logs');
 
-async function initialize(config) {
+async function initialize() {
   try {
-    if (
-      !config.mysql ||
-      typeof config.mysql !== 'object'
-    ) {
-      throw new AppError('Invalid config object for MCP initialization', 400);
-    }
+    const mysqlConfig = {
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME
+    };
     const redisUrl = process.env.REDIS_URL;
-    await contextService.initialize(redisUrl, config.mysql);
+    await contextService.initialize(redisUrl, mysqlConfig);
 
     return { initialized: true };
   } catch (err) {
@@ -160,6 +160,7 @@ async function getStatus() {
       lastCommand,
     };
   } catch (err) {
+    console.log(err)
     throw new AppError('Failed to get MCP status', 500, true, { raw: err });
   }
 }
