@@ -153,7 +153,6 @@ async function execute(command, params, apiKey, userId) {
 
     return result;
   } catch (err) {
-    console.log(err)
     if (!(err instanceof AppError)) {
       throw new AppError('MCP command execution error', 500);
     }
