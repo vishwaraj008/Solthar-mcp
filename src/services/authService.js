@@ -4,7 +4,7 @@ const { AppError } = require('../utils/error');
 const authTokenModel = require('../models/authModel');
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRY = '1h';
+const JWT_EXPIRY = process.env.JWT_EXPIRES_IN; // Default to 1 hour if not set
 
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET not configured');

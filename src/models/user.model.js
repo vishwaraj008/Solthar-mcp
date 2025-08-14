@@ -8,7 +8,6 @@ async function findByEmail(email) {
     if (rows.length !== 1) {
       return null;
     }
-    console.log(rows[0])
     return rows[0];
   } catch (err) {
     throw new AppError(

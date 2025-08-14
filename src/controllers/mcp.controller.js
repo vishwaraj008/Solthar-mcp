@@ -21,7 +21,6 @@ async function initializeMCP(req, res, next) {
         })
       );
     }
-    console.log(err)
     if (!(err instanceof AppError)) {
       return next(
         new AppError("Unexpected error while initialzing mcp", 500, true, {
