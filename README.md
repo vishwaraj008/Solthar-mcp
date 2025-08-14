@@ -85,7 +85,7 @@ src/
 {
   "tool": "Athena",
   "params": {
-    “Prompt: “prompt/question for Athena” 
+    "prompt": "prompt/question for Athena" 
   }
 }
 
