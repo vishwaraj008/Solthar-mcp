@@ -71,7 +71,7 @@ src/
 
 - To generate Documentation 
  {
-  "command": "Moad",
+  "tool": "Moad",
   "params": {
     "projectPath": "path to your project",
     "outputPath": "output path where you want your docs",
