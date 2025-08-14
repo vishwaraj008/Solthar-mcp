@@ -40,18 +40,18 @@ async function executeMCPCommand(req, res, next) {
     try {
         const userId = req.headers['x-user-id'];
         const apiKey = req.headers['x-api-key'];
-        const { command, params } = req.body;
+        const { tool, params } = req.body;
 
         if (!userId || !apiKey) {
             throw new ValidationError('User ID and API key are required in headers.');
         }
 
-        if (!command || typeof command !== 'string') {
+        if (!tool || typeof tool !== 'string') {
             throw new ValidationError('Command must be a valid string.');
         }
 
         // Call the processor (business logic orchestrator)
-        const result = await mcpProcessor.processRequest(userId, apiKey, command, params || {});
+        const result = await mcpProcessor.processRequest(userId, apiKey, tool, params || {});
 
         res.status(200).json({
             success: true,

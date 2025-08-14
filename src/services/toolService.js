@@ -1,6 +1,7 @@
-// src/services/tool.service.js
 const axios = require('axios');
 const { AppError } = require('../utils/error');
+const FormData = require('form-data');
+const fs = require('fs');
 
 // Athena configs
 const ATHENA_API_URL = process.env.ATHENA_API_URL;
@@ -10,37 +11,90 @@ const ATHENA_API_KEY = process.env.ATHENA_API_KEY;
 const MOAD_API_URL = process.env.MOAD_API_URL;
 const MOAD_API_KEY = process.env.MOAD_API_KEY;
 
-async function athena(prompt, options = {}) {
+async function athena(params, options = {}) {
   try {
-    if (!prompt || typeof prompt !== 'string') {
-      throw new AppError('Prompt must be a non-empty string', 400);
-    }
-
     if (!ATHENA_API_URL || !ATHENA_API_KEY) {
       throw new AppError('Athena API URL or API key not configured', 500);
     }
 
-    const response = await axios.post(
-      ATHENA_API_URL,
-      { prompt, options },
-      {
-        headers: {
-          'Authorization': `Bearer ${ATHENA_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 15000,
+    const baseUrl = process.env.ATHENA_API_URL;
+
+    if (params.prompt) {
+      if (!params || typeof params.prompt !== 'string') {
+        throw new AppError('Prompt must be a non-empty string', 400);
       }
-    );
 
-    if (!response.data || typeof response.data.answer !== 'string') {
-      throw new AppError('Invalid response from Athena API', 502);
+      const prompt = params.prompt;
+      const url = `${baseUrl}/query`;
+      const response = await axios.post(
+        url,
+        { prompt, options },
+        {
+          headers: {
+            'x-api-key': process.env.ATHENA_API_KEY,
+            'Content-Type': 'application/json',
+          },
+          timeout: 15000,
+        }
+      );
+
+      if (!response.data) {
+        throw new AppError('Invalid response from Athena API', 502);
+      }
+
+      return {
+        response: response.data?.data?.answer,
+        model: response.data.model || 'Athena',
+      };
+
+    } else if (params.upload) {
+      // CREATE FORMDATA INSIDE THE FUNCTION (not globally)
+      const formData = new FormData();
+      
+      // Convert file path to readable stream for Multer
+      if (params.upload.file) {
+        if (!fs.existsSync(params.upload.file)) {
+          throw new AppError(`File not found: ${params.upload.file}`, 400);
+        }
+        formData.append('file', fs.createReadStream(params.upload.file));
+      } else {
+        throw new AppError('File path is required for upload', 400);
+      }
+      
+      // Add required fields
+      formData.append('source_type', params.upload.source_type || 'document');
+      formData.append('title', params.upload.title || 'Untitled');
+      
+      // Add optional fields
+      if (params.upload.description) {
+        formData.append('description', params.upload.description);
+      }
+      if (params.upload.tags) {
+        formData.append('tags', params.upload.tags);
+      }
+
+      const url = `${baseUrl}/ingest`;
+      const response = await axios.post(url, formData, {
+        headers: {
+          'x-api-key': process.env.ATHENA_API_KEY,
+          ...formData.getHeaders(), // This sets proper multipart headers
+        },
+        timeout: 30000, // Increased timeout for file uploads
+      });
+
+      if (!response.data) {
+        throw new AppError('Invalid response from Athena API', 502);
+      }
+
+      return {
+        response: response.data?.data?.answer || response.data?.message,
+        model: response.data.model || 'Athena',
+      };
+      
+    } else {
+      throw new AppError('Either prompt or upload parameter is required', 400);
     }
-
-    return {
-      response: response.data.answer,
-      model: response.data.model || 'Athena',
-      raw: response.data,
-    };
+    
   } catch (err) {
     if (err.response) {
       throw new AppError(
@@ -51,12 +105,12 @@ async function athena(prompt, options = {}) {
       );
     }
     if (!(err instanceof AppError)) {
+      console.log('Failed to call Athena API:', err);
       throw new AppError('Failed to call Athena API', 500, true, { raw: err });
     }
     throw err;
   }
 }
-
 async function moad(projectPath, outputPath) {
   try {
     if (!projectPath || !outputPath) {

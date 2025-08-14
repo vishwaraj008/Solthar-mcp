@@ -11,7 +11,6 @@ async function findByEmail(email) {
     console.log(rows[0])
     return rows[0];
   } catch (err) {
-    console.log(err)
     throw new AppError(
       'Database error while fetching user by email',
       500,

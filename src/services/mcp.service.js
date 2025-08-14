@@ -1,7 +1,7 @@
 const { AppError } = require('../utils/error');
 const contextService = require('./context.service');
 const toolService = require('./toolService');
-
+const { randomUUID } = require('crypto');
 const apiKeyModel = require('../models/api_keys');
 const requestLogModel = require('../models/request_logs');
 const contextLogModel = require('../models/context_logs');
@@ -73,18 +73,20 @@ async function getContext(userId) {
 }
 
 async function saveContext(userId, context) {
-  await contextLogModel.saveContextLog(userId, context);
+  const sessionId = randomUUID();
+  await contextLogModel.saveContextLog(userId, context, sessionId);
+  await contextService.setContext(userId, context);
 }
 
-async function execute(command, params, apiKey, userId) {
+async function execute(tool, params, apiKey, userId) {
   try {
     // 1. Validate API key
     await validateApiKey(apiKey);
 
     let result;
 
-    switch (command) {
-      case 'generateDocs':
+    switch (tool) {
+      case 'Moad':
         if (!params.projectPath || !params.outputPath) {
           throw new AppError('Missing required params for generateDocs', 400);
         }
@@ -113,39 +115,55 @@ async function execute(command, params, apiKey, userId) {
         result = moadResponse;
         break;
 
-      case 'askAthena':
+        case 'Athena':
+        if (params.prompt) {  
         if (!params.prompt) {
-          throw new AppError('Missing prompt for Athena', 400);
+            throw new AppError('Missing prompt for Athena', 400);
+          }
+
+          const existingContext = await getContext(userId);
+          const fullPrompt = existingContext
+            ? existingContext + '\n' + params.prompt
+            : params.prompt;
+
+          const athenaResponse = await toolService.athena(params, params.options);
+
+          let updatedContext =
+            (existingContext || '') +
+            '\nUser: ' +
+            params.prompt +
+            '\nAthena: ' +
+            athenaResponse.response;
+
+          // Set max length to 500 characters
+          updatedContext = contextService.truncateContextIfNeeded(updatedContext, 500);
+
+          await saveContext(userId, updatedContext);
+          await logRequest({
+            userId,
+            apiKey,
+            prompt: params.prompt,
+            response: athenaResponse.response,
+            tool: 'AthenaRag',
+          });
+
+          result = athenaResponse;
+          
+
+        }else {
+          const ingestFile = await toolService.athena(params, params.options);
+          await logRequest({
+            userId,
+            apiKey,
+            prompt: `Ingest file: ${params.file}`,
+            response: ingestFile.response,
+            tool: 'AthenaIngest',
+          });
+          result = ingestFile;
         }
-
-        const existingContext = await getContext(userId);
-        const fullPrompt = existingContext
-          ? existingContext + '\n' + params.prompt
-          : params.prompt;
-
-        const athenaResponse = await toolService.athena(fullPrompt, params.options || {});
-
-        const updatedContext =
-          (existingContext || '') +
-          '\nUser: ' +
-          params.prompt +
-          '\nAthena: ' +
-          athenaResponse.response;
-
-        await saveContext(userId, updatedContext);
-        await logRequest({
-          userId,
-          apiKey,
-          prompt: params.prompt,
-          response: athenaResponse.response,
-          tool: 'Athena',
-        });
-
-        result = athenaResponse;
         break;
-
       default:
-        throw new AppError(`Unknown MCP command: ${command}`, 400);
+        throw new AppError(`Unknown MCP tool: ${tool}`, 400);
     }
 
     // 5. Increment usage count after success
@@ -180,12 +198,12 @@ async function getStatus() {
 async function listCommands() {
   return [
     {
-      command: 'generateDocs',
+      tool: 'Moad',
       description: 'Generate documentation for project source code',
       params: ['projectPath', 'outputDir', 'includeIndirectLogic'],
     },
     {
-      command: 'askAthena',
+      tool: 'askAthena',
       description: 'Send prompt to Athena model and get response',
       params: ['prompt', 'options'],
     },
