@@ -1,10 +1,12 @@
 
 # Solthar MCP Server
 
-Semantic Orchestration Layer for Threaded Hierarchical Abstraction & Reasoning (MCP)
+---
 
-## Overview
-Solthar MCP is a Node.js server implementing a Model Context Protocol router with JWT authentication, MySQL, Redis, and integration with external tools like Athena and MOAD.
+## Description
+**Solthar MCP** (Semantic Orchestration Layer for Threaded Hierarchical Abstraction & Reasoning) is a Node.js server implementing a Model Context Protocol router with JWT authentication, MySQL, Redis, and integration with external tools like Athena and MOAD.
+
+---
 
 ## Features
 - JWT-based authentication
@@ -15,8 +17,10 @@ Solthar MCP is a Node.js server implementing a Model Context Protocol router wit
 - MySQL and Redis support
 - Modular, scalable architecture
 
+---
+
 ## Project Structure
-```
+```text
 src/
   app.js                # Main server entry
   config/               # Configuration files (MySQL, Redis, etc.)
@@ -30,7 +34,9 @@ src/
   validators/           # Input validation
 ```
 
-## Available Routes
+---
+
+## API Endpoints
 
 ### Auth Routes
 | Method | Endpoint      | Description         |
@@ -47,68 +53,79 @@ src/
 | GET    | /commands        | List available MCP commands  |
 | POST   | /shutdown        | Shutdown MCP                 |
 
-## Tools Available(Can be found on my Github)
+---
+
+## Tools Available(You can find them on my github)
 - **Athena**: External API integration for advanced reasoning
 - **MOAD**: External tool for orchestration (see `toolService.js`)
 
+---
+
 ## Setup & Commands
-1. Install dependencies:
-  ```bash
-  npm install
-  ```
-2. Start in development mode (with nodemon):
-  ```bash
-  npm run dev
-  ```
-3. Start in production mode:
-  ```bash
-  npm start
-  ```
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+2. **Start in development mode (with nodemon):**
+   ```bash
+   npm run dev
+   ```
+3. **Start in production mode:**
+   ```bash
+   npm start
+   ```
 
-## Request Body
+---
 
-### For Moad
+## Request Body Examples
 
-- To generate Documentation 
- {
+### MOAD: Generate Documentation
+```json
+{
   "tool": "Moad",
   "params": {
     "projectPath": "path to your project",
     "outputPath": "output path where you want your docs",
-    "includeIndirectLogic": true/false
+    "includeIndirectLogic": true
   }
 }
+```
 
-### For Athena
-
-- To ask Athena
+### Athena: Ask a Question
+```json
 {
   "tool": "Athena",
   "params": {
-    "prompt": "prompt/question for Athena" 
+    "prompt": "prompt/question for Athena"
   }
 }
+```
 
-- To upload and ingest the docs
+### Athena: Upload and Ingest Docs
+```json
 {
   "tool": "Athena",
   "params": {
     "upload": {
-        "file": “filePath,
-        "title": “name/tile of file,
-        "source_type": “file type”,
-        "description": “description of file”,
-        "tags": “tags”	
+      "file": "filePath",
+      "title": "name/title of file",
+      "source_type": "file type",
+      "description": "description of file",
+      "tags": "tags"
     }
-    
   }
 }
+```
+
+---
 
 ## Environment Variables
 - `ATHENA_API_URL`, `ATHENA_API_KEY`: Athena tool config
 - `MOAD_API_URL`, `MOAD_API_KEY`: MOAD tool config
 - `MYSQL_*`, `REDIS_*`: Database configs
 - `JWT_SECRET`: JWT signing key
+
+---
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
